@@ -1,24 +1,41 @@
-import logo from './logo.svg';
+import { Children } from 'react';
 import './App.css';
+import Dashboard from './modules/Dashboard/Dashboard';
+import Form from "./modules/Form/index"
+import { Routes, Route, Navigate } from 'react-router-dom';
+
+const ProtectedRoute = ({ children }) => {
+  const isLoggedIn = localStorage.getItem('user:token') !== null || true;
+
+  if (!isLoggedIn) {
+    return <Navigate to={'/users/sign_in'} />
+  } else if (isLoggedIn && ['/users/sign_in', '/users/sign_up'].includes(window.location.pathname)) {
+    console.log("object >>")
+    return <Navigate to={'/'} />
+  }
+
+  return children;
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Routes>
+      <Route path='/' element={
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      } />
+      <Route path='users/sign_in' element={
+        <ProtectedRoute>
+          <Form isSignInPage={true} />
+        </ProtectedRoute>
+      } />
+      <Route path='users/sign_up' element={
+        <ProtectedRoute>
+          <Form isSignInPage={false} />
+        </ProtectedRoute>
+      } />
+    </Routes>
   );
 }
 
