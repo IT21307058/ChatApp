@@ -5,7 +5,7 @@ import Form from "./modules/Form/index"
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ children }) => {
-  const isLoggedIn = localStorage.getItem('user:token') !== null || true;
+  const isLoggedIn = localStorage.getItem('user:token') !== null || false;
 
   if (!isLoggedIn) {
     return <Navigate to={'/users/sign_in'} />
