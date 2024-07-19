@@ -1,12 +1,14 @@
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken')
 const express = require("express");
+const cors = require('cors')
 
 const Users = require("./model/User");
 const Conversations = require("./model/Conversations");
 const Messages = require("./model/Messages");
 
 const app = express();
+app.use(cors())
 require("./db/connection")
 
 const PORT = process.env.PORT || 8000;
@@ -71,9 +73,8 @@ app.post('/api/login', async (req, res, next) => {
                             $set: { token }
                         })
                         user.save();
-                        next()
+                        return res.status(200).send({ user: { id:user._id, email: user.email, fullName: user.fullName }, token: user.token });
                     })
-                    return res.status(200).send({ user: { email: user.email, fullName: user.fullName }, token: user.token });
                 }
             }
         }
@@ -135,25 +136,37 @@ app.post('/api/message', async (req, res) => {
 
 app.get('/api/message/:consversationId', async (req, res) => {
     try {
-        const consversationId = req.params.consversationId;
-        if (consversationId === 'new') return res.status(200).json([])
-        const messages = await Messages.find({ consversationId });
-        const messagesUserData = Promise.all(messages.map(async (message) => {
-            const user = await Users.findById(message.senderId);
-            return { user: { emai: user.email, fullName: user.fullName }, message: message.message }
-        }))
-
-        res.status(200).json(await messagesUserData);
+        const checkMessages = async (conversationId) => {
+            console.log(conversationId, 'conversationId')
+            const messages = await Messages.find({ conversationId });
+            const messageUserData = Promise.all(messages.map(async (message) => {
+                const user = await Users.findById(message.senderId);
+                return { user: { id: user._id, emai: user.email, fullName: user.fullName }, message: message.message }
+            }));
+            res.status(200).json(await messageUserData);
+        }
+        const conversationId = req.params.conversationId;
+        if (conversationId === 'new') {
+            const checkConversation = await Conversations.find({ members: { $all: [req.query.senderId, req.query.receiverId] } });
+            if (checkConversation.length > 0) {
+                checkMessages(checkConversation[0]._id);
+            } else {
+                return res.status(200).json([])
+            }
+        } else {
+            checkMessages(conversationId);
+        }
     } catch (error) {
-        console.log(error, "Error")
+        console.log('Error', error)
     }
 })
 
-app.get('/api/users', async (req, res) => {
+app.get('/api/users/:userId', async (req, res) => {
     try {
-        const users = await Users.find();
+        const userId = req.params.userId;
+        const users = await Users.find({_id: {$ne: userId}});
         const userData = Promise.all(users.map(async (user) => {
-            return { user: { emai: user.email, fullName: user.fullName }, userId: user._id }
+            return { user: { emai: user.email, fullName: user.fullName,  receiverId: user._id } }
         }))
 
         res.status(200).json(await userData);
